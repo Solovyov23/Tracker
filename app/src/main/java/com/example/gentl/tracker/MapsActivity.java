@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -35,7 +36,14 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 
 /* Simple activity to manage location service */
@@ -89,8 +97,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         distanceSeekBar = (SeekBar)findViewById(R.id.distanceSeekBar);
         distanceSeekBar.setOnSeekBarChangeListener(seekBarChangeListener);
 
-        doBindService();
-
         updateUI();
     }
 
@@ -115,7 +121,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         {
             try
             {
-                if(mBoundService.getDistance() != 0) distanceInMeters = mBoundService.getDistance();
+                distanceInMeters = mBoundService.getDistance();
                 if(mBoundService.getStartLocation() != null) myStartLocation = mBoundService.getStartLocation();
             }
             catch (RemoteException e)
@@ -151,7 +157,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     intent.putExtra(UserLocationService.START_LOCATION_TAG, myStartLocation);
                     ContextCompat.startForegroundService(getApplicationContext(), intent);
                     doBindService();
-            }
+                }
 
                 myStartLocation = myCurrentPosition;
 
@@ -272,6 +278,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 bestLocation = l;
             }
         }
+
         return bestLocation;
     }
 
@@ -297,11 +304,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     {
         public void onServiceConnected(ComponentName className, IBinder service)
         {
-            if(service == null)
+            /*if(service == null)
             {
                 Log.i(LOG_TAG, "onServiceConnected: service is not created yet!");
                 return;
-            }
+            }*/
             // This is called when the connection with the service has
             // been established, giving us the service object we can use
             // to interact with the service.  Because we have bound to a
@@ -339,6 +346,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mConnection,
                     Context.BIND_ABOVE_CLIENT);
             mIsBound = true;
+
+            IntentFilter intentFilter = new IntentFilter(
+                    "android.intent.action.MAIN");
+
+            mReceiver = new BroadcastReceiver() {
+
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    //extract our message from intent
+                    Location newStartLocation = (Location) intent.getExtras().get(UserLocationService.START_LOCATION_TAG);
+                    // Update the data and draw a circle (distance)
+                    myStartLocation = newStartLocation;
+                    myCurrentPosition = newStartLocation;
+                    addCircleOnTheMap();
+                }
+            };
+
+            //registering our receiver
+            this.registerReceiver(mReceiver, intentFilter);
         }
     }
 
@@ -348,7 +374,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         {
             // Detach our existing connection.
             unbindService(mConnection);
+            mConnection.onServiceDisconnected(ComponentName.unflattenFromString(""));
             mIsBound = false;
+            //unregister our receiver
+            this.unregisterReceiver(mReceiver);
         }
     }
 
@@ -393,36 +422,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private BroadcastReceiver mReceiver;
 
     @Override
-    protected void onResume() {
+    protected void onResume()
+    {
         // TODO Auto-generated method stub
         super.onResume();
 
-        IntentFilter intentFilter = new IntentFilter(
-                "android.intent.action.MAIN");
-
-        mReceiver = new BroadcastReceiver() {
-
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                //extract our message from intent
-                Location newStartLocation = (Location) intent.getExtras().get(UserLocationService.START_LOCATION_TAG);
-                // Update the data and draw a circle (distance)
-                myStartLocation = newStartLocation;
-                myCurrentPosition = newStartLocation;
-                addCircleOnTheMap();
-            }
-        };
+        doBindService();
         updateUI();
-        //registering our receiver
-        this.registerReceiver(mReceiver, intentFilter);
     }
 
     @Override
-    protected void onPause() {
+    protected void onPause()
+    {
         // TODO Auto-generated method stub
         super.onPause();
-        //unregister our receiver
-        this.unregisterReceiver(this.mReceiver);
+
+        doUnbindService();
     }
 
     // Draws the distance on the map
@@ -449,7 +464,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser)
         {
-            if(progress == 0) return;
+            //if(progress == 0) return;
             distanceInMeters = progress;
             descriptionTextView.setText(distanceInMeters + "");
             addCircleOnTheMap();
