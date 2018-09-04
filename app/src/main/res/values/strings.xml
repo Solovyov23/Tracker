@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Tracker</string>
+    <string name="title_activity_maps">Map</string>
+    <string name="not_internet_connection">Not internet connection!</string>
+    <string name="every_meters_notify_me">Notify me every (meters):</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="you_have_reached_the_distance_limit">You have reached the distance limit!</string>
+    <string name="you_have_moved_by">You\'ve moved by </string>
+    <string name="meters_after_the_next">" meters, after the next "</string>
+    <string name="meters_we_will_notify_you_again">" meters we will notify you again!"</string>
+
+
+</resources>
